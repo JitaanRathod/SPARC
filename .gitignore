@@ -1,0 +1,9 @@
+# Compiled Java files
+*.class
+
+# VS Code settings (optional, up to your team)
+.vscode/
+
+# OS junk
+.DS_Store
+Thumbs.db
