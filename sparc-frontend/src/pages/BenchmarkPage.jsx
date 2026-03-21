@@ -148,9 +148,9 @@ export default function BenchmarkPage() {
         {/* Interpretation tips */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6 fade-up fade-up-4">
           {[
-            { title: 'Dijkstra wins on sparse', desc: 'For small-to-medium graphs without negative edges, Dijkstra's O((V+E)logV) is typically fastest due to priority queue efficiency.', color: '#00e5ff' },
-            { title: 'Bellman-Ford for negative edges', desc: 'The only single-source algorithm that handles negative weights. Linear O(VE) is expensive but necessary when weights are negative.', color: '#a855f7' },
-            { title: 'Floyd-Warshall scales cubically', desc: 'All-pairs result is its strength. O(V³) makes it impractical for V > 500, but ideal for dense small graphs needing all distances.', color: '#f59e0b' },
+            { title: 'Dijkstra wins on sparse', desc: "For small-to-medium graphs without negative edges, Dijkstra's O((V+E)logV) is typically fastest due to priority queue efficiency.", color: '#00e5ff' },
+            { title: 'Bellman-Ford for negative edges', desc: "The only single-source algorithm that handles negative weights. Linear O(VE) is expensive but necessary when weights are negative.", color: '#a855f7' },
+            { title: 'Floyd-Warshall scales cubically', desc: "All-pairs result is its strength. O(V\u00B3) makes it impractical for V > 500, but ideal for dense small graphs needing all distances.", color: '#f59e0b' },
           ].map(({ title, desc, color }) => (
             <div key={title} className="glass-panel rounded-xl p-4">
               <p className="text-xs font-mono font-semibold mb-2" style={{ color }}>{title}</p>
