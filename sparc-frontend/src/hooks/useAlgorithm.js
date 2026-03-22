@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react'
 import { compareAll, runAlgorithm } from '../services/api'
 import { MOCK_COMPARE_RESULT, MOCK_GRAPHS } from '../services/mockData'
 
-const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true' || true // flip to false when backend is live
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true' || false // backend is live
 
 export function useAlgorithm() {
   const [loading, setLoading] = useState(false)

@@ -11,34 +11,39 @@ export default function GraphVisualizer({ graph, results, selectedAlgo, onNodeCl
   const svgRef = useRef(null)
   const simRef = useRef(null)
   const [dimensions, setDimensions] = useState({ w: 800, h: 500 })
-  const [animatedEdges, setAnimatedEdges] = useState(new Set())
   const containerRef = useRef(null)
 
-  // Resize observer
+  // Resize observer safely updates only if changed
   useEffect(() => {
     if (!containerRef.current) return
     const ro = new ResizeObserver(entries => {
       const { width, height } = entries[0].contentRect
-      setDimensions({ w: width, h: Math.max(height, 400) })
+      setDimensions(prev => {
+        const newH = Math.max(height, 400)
+        return (prev.w === width && prev.h === newH) ? prev : { w: width, h: newH }
+      })
     })
     ro.observe(containerRef.current)
     return () => ro.disconnect()
   }, [])
 
-  // Animate path edges when results change
-  useEffect(() => {
-    if (!highlightPath.length) { setAnimatedEdges(new Set()); return }
-    const set = new Set()
-    for (let i = 0; i < highlightPath.length - 1; i++) {
-      set.add(`${highlightPath[i]}-${highlightPath[i + 1]}`)
-    }
-    setAnimatedEdges(set)
-  }, [highlightPath])
-
   // D3 simulation
   useEffect(() => {
-    if (!svgRef.current || !graph) return
-    const { w, h } = dimensions
+    try {
+      if (!svgRef.current || !graph) return
+
+    // Derive animated edges directly, avoiding extra react state
+    const animatedEdges = new Set()
+    if (highlightPath && highlightPath.length) {
+      for (let i = 0; i < highlightPath.length - 1; i++) {
+        animatedEdges.add(`${highlightPath[i]}-${highlightPath[i + 1]}`)
+      }
+    }
+
+    // Force constraints so nodes don't spawn off-screen if height is ridiculous
+    const w = Math.max(dimensions.w, 100);
+    const h = Math.min(Math.max(dimensions.h, 100), 1000); 
+
     const svg = d3.select(svgRef.current)
     svg.selectAll('*').remove()
 
@@ -212,18 +217,37 @@ export default function GraphVisualizer({ graph, results, selectedAlgo, onNodeCl
       node.attr('transform', d => `translate(${d.x},${d.y})`)
     })
 
+    // Debug print
+    svg.append('text').attr('x', 20).attr('y', 15).attr('fill', '#10b981')
+      .attr('font-size', '11px').attr('font-family', 'monospace')
+      .text(`D3 Active: ${nodes.length} nodes, ${edges.length} edges. w=${w}, h=${h}`);
+
     return () => sim.stop()
-  }, [graph, results, selectedAlgo, highlightPath, dimensions, animatedEdges])
+    } catch (err) {
+      console.error(err)
+      d3.select(svgRef.current).selectAll('*').remove()
+      d3.select(svgRef.current).append('text')
+        .attr('x', 20).attr('y', 30)
+        .attr('fill', '#f43f5e').attr('font-family', 'monospace')
+        .text(`D3 Error: ${err.message}`)
+      d3.select(svgRef.current).append('text')
+        .attr('x', 20).attr('y', 50)
+        .attr('fill', '#f43f5e').attr('font-size', '10px')
+        .text(err.stack?.substring(0, 150))
+    }
+  }, [graph, results, selectedAlgo, highlightPath ? highlightPath.join(',') : '', dimensions.w, dimensions.h])
 
   return (
     <div ref={containerRef} className="w-full h-full relative" style={{ minHeight: 400 }}>
-      <svg
-        ref={svgRef}
-        width={dimensions.w}
-        height={dimensions.h}
-        className="w-full h-full"
-        style={{ background: 'transparent' }}
-      />
+      <div className="absolute inset-0">
+        <svg
+          ref={svgRef}
+          width={dimensions.w}
+          height={dimensions.h}
+          className="w-full h-full block"
+          style={{ background: 'transparent' }}
+        />
+      </div>
       {/* Legend */}
       <div className="absolute bottom-3 left-3 flex items-center gap-3 text-xs font-mono" style={{ color: '#4a6080' }}>
         <div className="flex items-center gap-1.5">

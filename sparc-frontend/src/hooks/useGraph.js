@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react'
 import { MOCK_GRAPHS } from '../services/mockData'
 import { getPresetGraph } from '../services/api'
 
-const USE_MOCK = true
+const USE_MOCK = false
 
 export function useGraph(initial = 'small') {
   const [graph, setGraph] = useState(MOCK_GRAPHS[initial])
