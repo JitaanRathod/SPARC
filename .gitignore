@@ -7,5 +7,5 @@
 # OS junk
 .DS_Store
 Thumbs.db
-frontend/node_modules/
-backend/node_modules/
+sparc-frontend/node_modules/
+sparc-backend/node_modules/
