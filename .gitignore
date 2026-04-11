@@ -15,3 +15,5 @@ backend/node_modules/
 # OS junk
 .DS_Store
 Thumbs.db
+sparc-frontend/node_modules/
+sparc-backend/node_modules/
