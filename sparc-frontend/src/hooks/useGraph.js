@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react'
 import { MOCK_GRAPHS } from '../services/mockData'
 import { getPresetGraph } from '../services/api'
 
-const USE_MOCK = true
+const USE_MOCK = false
 
 export function useGraph(initial = 'small') {
   const [graph, setGraph] = useState(MOCK_GRAPHS[initial])
@@ -59,5 +59,21 @@ export function useGraph(initial = 'small') {
     setGraph(MOCK_GRAPHS[presetName] || MOCK_GRAPHS.small)
   }, [presetName])
 
-  return { graph, setGraph, presetName, loading, loadPreset, addNode, addEdge, removeNode, removeEdge, reset }
+  const generateGraph = useCallback((numNodes) => {
+    const nodes = Array.from({ length: numNodes }, (_, i) => ({ id: i, label: String(i) }))
+    const edges = []
+    for (let i = 0; i < numNodes; i++) {
+        const numEdges = Math.max(1, Math.floor(Math.random() * 3))
+        for (let j = 0; j < numEdges; j++) {
+            let target = Math.floor(Math.random() * numNodes);
+            if (target === i) target = (target + 1) % numNodes;
+            const weight = Math.floor(Math.random() * 100) + 1;
+            edges.push({ source: i, target, weight });
+        }
+    }
+    setGraph({ nodes, edges, directed: true })
+    setPresetName('custom')
+  }, [])
+
+  return { graph, setGraph, presetName, loading, loadPreset, addNode, addEdge, removeNode, removeEdge, reset, generateGraph }
 }

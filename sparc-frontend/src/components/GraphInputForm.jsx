@@ -7,9 +7,10 @@ const PRESETS = [
   { key: 'negative', label: 'Negative', desc: '5V · 9E · neg' },
 ]
 
-export default function GraphInputForm({ graph, onLoadPreset, onAddNode, onAddEdge, onRemoveNode, onRemoveEdge, onReset }) {
+export default function GraphInputForm({ graph, onLoadPreset, onAddNode, onAddEdge, onRemoveNode, onRemoveEdge, onReset, onGenerateGraph }) {
   const [tab, setTab] = useState('preset')
   const [nodeLabel, setNodeLabel] = useState('')
+  const [numNodes, setNumNodes] = useState(10)
   const [edge, setEdge] = useState({ source: '', target: '', weight: '1' })
   const [jsonText, setJsonText] = useState('')
   const [jsonError, setJsonError] = useState('')
@@ -62,7 +63,7 @@ export default function GraphInputForm({ graph, onLoadPreset, onAddNode, onAddEd
 
       {/* Tabs */}
       <div className="flex" style={{ borderBottom: '1px solid #1a2d50' }}>
-        {['preset', 'node', 'edge', 'json'].map(t => (
+        {['preset', 'random', 'node', 'edge', 'json'].map(t => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -100,6 +101,31 @@ export default function GraphInputForm({ graph, onLoadPreset, onAddNode, onAddEd
           </div>
         )}
 
+        {/* Random tab */}
+        {tab === 'random' && (
+          <div className="space-y-3">
+            <p className="text-xs font-mono mb-3" style={{ color: '#4a6080' }}>Generate a random graph of size N</p>
+            <div>
+              <label className="block text-xs font-mono mb-1.5" style={{ color: '#4a6080' }}>NUMBER OF NODES</label>
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  min={2}
+                  max={100}
+                  value={numNodes}
+                  onChange={e => setNumNodes(Number(e.target.value))}
+                  onKeyDown={e => e.key === 'Enter' && onGenerateGraph(numNodes)}
+                  className="input-cyber flex-1 px-3 py-2 rounded-lg text-sm"
+                  style={{ color: '#e2ecf8', background: 'rgba(13,21,38,0.8)' }}
+                />
+                <button onClick={() => onGenerateGraph(numNodes)} className="btn-primary px-3 py-2 rounded-lg font-mono text-xs">
+                  GENERATE
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Node tab */}
         {tab === 'node' && (
           <div className="space-y-3">
@@ -112,6 +138,7 @@ export default function GraphInputForm({ graph, onLoadPreset, onAddNode, onAddEd
                   onKeyDown={e => e.key === 'Enter' && handleAddNode()}
                   placeholder="e.g. F"
                   className="input-cyber flex-1 px-3 py-2 rounded-lg text-sm"
+                  style={{ color: '#e2ecf8', background: 'rgba(13,21,38,0.8)' }}
                 />
                 <button onClick={handleAddNode} className="btn-primary px-3 py-2 rounded-lg">
                   <Plus size={14} />
@@ -155,6 +182,7 @@ export default function GraphInputForm({ graph, onLoadPreset, onAddNode, onAddEd
                     onChange={e => setEdge(prev => ({ ...prev, [f.key]: e.target.value }))}
                     placeholder={f.placeholder}
                     className="input-cyber w-full px-2 py-2 rounded-lg text-sm"
+                    style={{ color: '#e2ecf8', background: 'rgba(13,21,38,0.8)' }}
                   />
                 </div>
               ))}
@@ -193,6 +221,7 @@ export default function GraphInputForm({ graph, onLoadPreset, onAddNode, onAddEd
               placeholder={'{\n  "nodes": [{"id":0,"label":"A"}],\n  "edges": [{"source":0,"target":1,"weight":5}],\n  "directed": true\n}'}
               rows={8}
               className="input-cyber w-full px-3 py-2 rounded-lg text-xs resize-none"
+              style={{ color: '#e2ecf8', background: 'rgba(13,21,38,0.8)' }}
             />
             {jsonError && <p className="text-xs font-mono" style={{ color: '#f43f5e' }}>{jsonError}</p>}
             <div className="flex gap-2">

@@ -18,7 +18,7 @@ const ALGO_OPTIONS = [
 ]
 
 export default function VisualizerPage() {
-  const { graph, presetName, loadPreset, addNode, addEdge, removeNode, removeEdge, reset } = useGraph('small')
+  const { graph, presetName, loadPreset, addNode, addEdge, removeNode, removeEdge, reset, generateGraph } = useGraph('small')
   const { loading, results, error, run } = useAlgorithm()
 
   const [sourceNode, setSourceNode] = useState(0)
@@ -150,6 +150,7 @@ export default function VisualizerPage() {
               onRemoveNode={removeNode}
               onRemoveEdge={removeEdge}
               onReset={reset}
+              onGenerateGraph={generateGraph}
             />
 
             {/* Results panel */}

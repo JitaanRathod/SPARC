@@ -1,7 +1,15 @@
 # Compiled Java files
 *.class
 
-# VS Code settings (optional, up to your team)
+# Node modules (VERY IMPORTANT)
+node_modules/
+sparc-frontend/node_modules/
+backend/node_modules/
+
+# Environment files
+.env
+
+# VS Code settings
 .vscode/
 
 # OS junk

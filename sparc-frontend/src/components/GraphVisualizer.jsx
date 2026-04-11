@@ -11,39 +11,63 @@ export default function GraphVisualizer({ graph, results, selectedAlgo, onNodeCl
   const svgRef = useRef(null)
   const simRef = useRef(null)
   const [dimensions, setDimensions] = useState({ w: 800, h: 500 })
-  const [animatedEdges, setAnimatedEdges] = useState(new Set())
   const containerRef = useRef(null)
 
-  // Resize observer
+  // Resize observer safely updates only if changed
   useEffect(() => {
     if (!containerRef.current) return
     const ro = new ResizeObserver(entries => {
       const { width, height } = entries[0].contentRect
-      setDimensions({ w: width, h: Math.max(height, 400) })
+      setDimensions(prev => {
+        const newH = Math.max(height, 400)
+        return (prev.w === width && prev.h === newH) ? prev : { w: width, h: newH }
+      })
     })
     ro.observe(containerRef.current)
     return () => ro.disconnect()
   }, [])
 
-  // Animate path edges when results change
-  useEffect(() => {
-    if (!highlightPath.length) { setAnimatedEdges(new Set()); return }
-    const set = new Set()
-    for (let i = 0; i < highlightPath.length - 1; i++) {
-      set.add(`${highlightPath[i]}-${highlightPath[i + 1]}`)
-    }
-    setAnimatedEdges(set)
-  }, [highlightPath])
-
   // D3 simulation
   useEffect(() => {
-    if (!svgRef.current || !graph) return
-    const { w, h } = dimensions
+    try {
+      if (!svgRef.current || !graph) return
+
+    // Derive animated edges directly, avoiding extra react state
+    const animatedEdges = new Set()
+    if (highlightPath && highlightPath.length) {
+      for (let i = 0; i < highlightPath.length - 1; i++) {
+        animatedEdges.add(`${highlightPath[i]}-${highlightPath[i + 1]}`)
+      }
+    }
+
+    // Force constraints so nodes don't spawn off-screen if height is ridiculous
+    const w = Math.max(dimensions.w, 100);
+    const h = Math.min(Math.max(dimensions.h, 100), 1000); 
+
     const svg = d3.select(svgRef.current)
     svg.selectAll('*').remove()
 
     // Defs
     const defs = svg.append('defs')
+
+    // 3D Drop Shadow
+    const shadow = defs.append('filter').attr('id', 'drop-shadow')
+      .attr('x', '-20%').attr('y', '-20%').attr('width', '150%').attr('height', '150%')
+    shadow.append('feDropShadow').attr('dx', 2).attr('dy', 4).attr('stdDeviation', 4).attr('flood-color', '#000000').attr('flood-opacity', 0.6)
+
+    // 3D Sphere Gradients for nodes
+    const colors = {
+      default: ['#1e3a8a', '#0f172a'],
+      source: ['#00e5ff', '#007080'],
+      target: ['#10b981', '#064e3b'],
+      path: ['#a855f7', '#4c1d95']
+    }
+    Object.entries(colors).forEach(([name, [stop1, stop2]]) => {
+      const grad = defs.append('radialGradient').attr('id', `grad-${name}`)
+        .attr('cx', '30%').attr('cy', '30%').attr('r', '70%')
+      grad.append('stop').attr('offset', '0%').attr('stop-color', stop1)
+      grad.append('stop').attr('offset', '100%').attr('stop-color', stop2)
+    })
 
     // Glow filter
     ;['cyan', 'violet', 'amber', 'node'].forEach((name, i) => {
@@ -62,15 +86,15 @@ export default function GraphVisualizer({ graph, results, selectedAlgo, onNodeCl
       defs.append('marker')
         .attr('id', `arrow-${key}`)
         .attr('viewBox', '0 -5 10 10')
-        .attr('refX', 22)
+        .attr('refX', Math.max(26, 26)) // Guaranteed outside the 16px radius
         .attr('refY', 0)
-        .attr('markerWidth', 6)
-        .attr('markerHeight', 6)
+        .attr('markerWidth', 7)
+        .attr('markerHeight', 7)
         .attr('orient', 'auto')
         .append('path')
         .attr('d', 'M0,-5L10,0L0,5')
         .attr('fill', markerColors[key])
-        .attr('opacity', key === 'default' ? 0.4 : 0.9)
+        .attr('opacity', key === 'default' ? 0.7 : 1)
     })
 
     // Copy nodes/edges with positions
@@ -93,40 +117,47 @@ export default function GraphVisualizer({ graph, results, selectedAlgo, onNodeCl
 
     const accentColor = selectedAlgo ? ALGO_COLORS[selectedAlgo] : '#00e5ff'
 
-    // Draw edges
+    // Draw edges as PATHS to allow curving (prevents hiding overlapping bidirectional arrows)
     const link = edgeLayer.selectAll('g.edge')
       .data(edges)
       .enter().append('g').attr('class', 'edge')
 
-    const edgeLine = link.append('line')
+    const edgeLine = link.append('path')
+      .attr('fill', 'none')
       .attr('stroke', d => {
         const key = `${d.source.id ?? d.source}-${d.target.id ?? d.target}`
-        return animatedEdges.has(key) ? accentColor : '#1a2d50'
+        return animatedEdges.has(key) ? accentColor : '#1e3a8a'
       })
       .attr('stroke-width', d => {
         const key = `${d.source.id ?? d.source}-${d.target.id ?? d.target}`
-        return animatedEdges.has(key) ? 2.5 : 1
+        return animatedEdges.has(key) ? 3 : 1.5
       })
       .attr('stroke-opacity', d => {
         const key = `${d.source.id ?? d.source}-${d.target.id ?? d.target}`
-        return animatedEdges.has(key) ? 1 : 0.35
+        return animatedEdges.has(key) ? 1 : 0.6
       })
       .attr('filter', d => {
         const key = `${d.source.id ?? d.source}-${d.target.id ?? d.target}`
-        return animatedEdges.has(key) ? 'url(#glow-cyan)' : null
+        return animatedEdges.has(key) ? 'url(#glow-cyan)' : 'url(#drop-shadow)'
       })
       .attr('marker-end', graph.directed ? d => {
         const key = `${d.source.id ?? d.source}-${d.target.id ?? d.target}`
         return `url(#arrow-${animatedEdges.has(key) ? 'path' : 'default'})`
       } : null)
 
-    // Edge weight labels
-    link.append('text')
-      .attr('fill', '#4a6080')
+    // Edge weight labels with background for readability
+    const labelGroup = link.append('g')
+    labelGroup.append('rect')
+      .attr('fill', '#0f172a').attr('rx', 4).attr('opacity', 0.8)
+      .attr('x', -8).attr('y', -8).attr('width', 16).attr('height', 16)
+    
+    labelGroup.append('text')
+      .attr('fill', '#e2ecf8')
       .attr('font-size', 10)
+      .attr('font-weight', 'bold')
       .attr('font-family', 'JetBrains Mono')
       .attr('text-anchor', 'middle')
-      .attr('dy', -4)
+      .attr('dy', 3)
       .text(d => d.weight)
 
     // Draw nodes
@@ -158,23 +189,23 @@ export default function GraphVisualizer({ graph, results, selectedAlgo, onNodeCl
       .attr('filter', 'url(#glow-cyan)')
       .attr('class', d => highlightPath.includes(d.id) ? 'animate-ping' : '')
 
-    // Node circle
+    // Node 3D Sphere
     node.append('circle')
-      .attr('r', 14)
+      .attr('r', 16)
       .attr('fill', d => {
-        if (d.id === highlightPath[0]) return 'rgba(0,229,255,0.25)'
-        if (d.id === highlightPath[highlightPath.length - 1]) return 'rgba(16,185,129,0.25)'
-        if (highlightPath.includes(d.id)) return 'rgba(0,229,255,0.12)'
-        return 'rgba(13,21,38,0.9)'
+        if (d.id === highlightPath[0]) return 'url(#grad-source)'
+        if (d.id === highlightPath[highlightPath.length - 1]) return 'url(#grad-target)'
+        if (highlightPath.includes(d.id)) return 'url(#grad-path)'
+        return 'url(#grad-default)'
       })
       .attr('stroke', d => {
         if (d.id === highlightPath[0]) return '#00e5ff'
         if (d.id === highlightPath[highlightPath.length - 1]) return '#10b981'
         if (highlightPath.includes(d.id)) return accentColor
-        return '#243d6a'
+        return '#3b82f6'
       })
-      .attr('stroke-width', d => highlightPath.includes(d.id) ? 2 : 1.5)
-      .attr('filter', d => highlightPath.includes(d.id) ? 'url(#glow-cyan)' : null)
+      .attr('stroke-width', d => highlightPath.includes(d.id) ? 2.5 : 1.5)
+      .attr('filter', d => highlightPath.includes(d.id) ? 'url(#glow-cyan)' : 'url(#drop-shadow)')
 
     // Node label
     node.append('text')
@@ -201,29 +232,63 @@ export default function GraphVisualizer({ graph, results, selectedAlgo, onNodeCl
 
     // Tick
     sim.on('tick', () => {
-      edgeLine
-        .attr('x1', d => d.source.x).attr('y1', d => d.source.y)
-        .attr('x2', d => d.target.x).attr('y2', d => d.target.y)
+      edgeLine.attr('d', d => {
+        const dx = d.target.x - d.source.x, dy = d.target.y - d.source.y;
+        const dr = Math.sqrt(dx * dx + dy * dy) * 1.5; // Curve radius
+        // Force straight lines if undirected, curved if directed to show arrows clearly
+        return graph.directed 
+          ? `M${d.source.x},${d.source.y}A${dr},${dr} 0 0,1 ${d.target.x},${d.target.y}`
+          : `M${d.source.x},${d.source.y}L${d.target.x},${d.target.y}`
+      })
 
-      link.select('text')
-        .attr('x', d => (d.source.x + d.target.x) / 2)
-        .attr('y', d => (d.source.y + d.target.y) / 2)
+      // Update completely precise label positions for curved paths
+      labelGroup.attr('transform', d => {
+        const dx = d.target.x - d.source.x, dy = d.target.y - d.source.y;
+        const cx = (d.source.x + d.target.x) / 2;
+        const cy = (d.source.y + d.target.y) / 2;
+        if (graph.directed) {
+          // Offset text along the curve perpendicular normal
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const nx = -dy / dist; const ny = dx / dist;
+          return `translate(${cx + nx * 15}, ${cy + ny * 15})`
+        }
+        return `translate(${cx}, ${cy})`
+      })
 
       node.attr('transform', d => `translate(${d.x},${d.y})`)
     })
 
+    // Debug print
+    svg.append('text').attr('x', 20).attr('y', 15).attr('fill', '#10b981')
+      .attr('font-size', '11px').attr('font-family', 'monospace')
+      .text(`D3 Active: ${nodes.length} nodes, ${edges.length} edges. w=${w}, h=${h}`);
+
     return () => sim.stop()
-  }, [graph, results, selectedAlgo, highlightPath, dimensions, animatedEdges])
+    } catch (err) {
+      console.error(err)
+      d3.select(svgRef.current).selectAll('*').remove()
+      d3.select(svgRef.current).append('text')
+        .attr('x', 20).attr('y', 30)
+        .attr('fill', '#f43f5e').attr('font-family', 'monospace')
+        .text(`D3 Error: ${err.message}`)
+      d3.select(svgRef.current).append('text')
+        .attr('x', 20).attr('y', 50)
+        .attr('fill', '#f43f5e').attr('font-size', '10px')
+        .text(err.stack?.substring(0, 150))
+    }
+  }, [graph, results, selectedAlgo, highlightPath ? highlightPath.join(',') : '', dimensions.w, dimensions.h])
 
   return (
     <div ref={containerRef} className="w-full h-full relative" style={{ minHeight: 400 }}>
-      <svg
-        ref={svgRef}
-        width={dimensions.w}
-        height={dimensions.h}
-        className="w-full h-full"
-        style={{ background: 'transparent' }}
-      />
+      <div className="absolute inset-0">
+        <svg
+          ref={svgRef}
+          width={dimensions.w}
+          height={dimensions.h}
+          className="w-full h-full block"
+          style={{ background: 'transparent' }}
+        />
+      </div>
       {/* Legend */}
       <div className="absolute bottom-3 left-3 flex items-center gap-3 text-xs font-mono" style={{ color: '#4a6080' }}>
         <div className="flex items-center gap-1.5">

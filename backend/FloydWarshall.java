@@ -1,72 +1,63 @@
+import java.util.Arrays;
+
 public class FloydWarshall {
 
-    static final int INF = 99999;
-    static final int MAX_NODES = 150;
+    public static AlgorithmResult run(Graph graph, Integer source, Integer target) {
+        long startTime = System.nanoTime();
+        int numNodes = graph.nodes.size();
 
-    int V;
-    int[][] dist;
+        double[][] dist = new double[numNodes][numNodes];
+        for (double[] row : dist) Arrays.fill(row, Double.POSITIVE_INFINITY);
 
-    public FloydWarshall(int vertices) {
-        if (vertices > MAX_NODES) {
-            System.out.println("Error: Max allowed nodes is " + MAX_NODES);
-            return;
+        for (int i = 0; i < numNodes; i++) dist[i][i] = 0.0;
+
+        for (Graph.Edge e : graph.edges) {
+            dist[e.source][e.target] = Math.min(dist[e.source][e.target], e.weight);
+            if (!graph.directed) {
+                dist[e.target][e.source] = Math.min(dist[e.target][e.source], e.weight);
+            }
         }
-        this.V = vertices;
-        this.dist = new int[V][V];
-    }
 
-    public void loadGraph(int[][] graph) {
-        for (int i = 0; i < V; i++)
-            for (int j = 0; j < V; j++)
-                dist[i][j] = graph[i][j];
-    }
+        int relaxations = 0;
+        int nodesVisited = numNodes;
 
-    public void run() {
-        for (int k = 0; k < V; k++) {
-            for (int i = 0; i < V; i++) {
-                for (int j = 0; j < V; j++) {
-                    if (dist[i][k] != INF && dist[k][j] != INF) {
-                        if (dist[i][k] + dist[k][j] < dist[i][j]) {
-                            dist[i][j] = dist[i][k] + dist[k][j];
-                        }
+        for (int k = 0; k < numNodes; k++) {
+            for (int i = 0; i < numNodes; i++) {
+                for (int j = 0; j < numNodes; j++) {
+                    relaxations++;
+                    if (dist[i][k] != Double.POSITIVE_INFINITY && dist[k][j] != Double.POSITIVE_INFINITY) {
+                        dist[i][j] = Math.min(dist[i][j], dist[i][k] + dist[k][j]);
                     }
                 }
             }
         }
-    }
 
-    public boolean hasNegativeCycle() {
-        for (int i = 0; i < V; i++) {
-            if (dist[i][i] < 0) return true;
-        }
-        return false;
-    }
+        long endTime = System.nanoTime();
 
-    public void printResult() {
-        System.out.println("\nShortest Distance Matrix:");
-        System.out.print("     ");
-        for (int j = 0; j < V; j++)
-            System.out.printf("%6d", j);
-        System.out.println();
-
-        for (int i = 0; i < V; i++) {
-            System.out.printf("[%2d] ", i);
-            for (int j = 0; j < V; j++) {
-                if (dist[i][j] == INF)
-                    System.out.printf("%6s", "INF");
-                else
-                    System.out.printf("%6d", dist[i][j]);
+        AlgorithmResult res = new AlgorithmResult();
+        res.algorithm = "FLOYD_WARSHALL";
+        res.executionTimeMs = (endTime - startTime) / 1_000_000.0;
+        
+        Object[][] outDist = new Object[numNodes][numNodes];
+        for (int i = 0; i < numNodes; i++) {
+            for (int j = 0; j < numNodes; j++) {
+                outDist[i][j] = dist[i][j] == Double.POSITIVE_INFINITY ? null : (int)dist[i][j];
             }
-            System.out.println();
         }
-    }
+        res.distanceMatrix = outDist;
 
-    public long runWithTiming() {
-        long start = System.nanoTime();
-        run();
-        long end = System.nanoTime();
-        long timeTaken = (end - start);
-        System.out.println("Floyd-Warshall Time: " + timeTaken + " ns  (" + timeTaken / 1_000_000.0 + " ms)");
-        return timeTaken;
+        // Frontend expects exact path for highlighting, but FW solves all-pairs.
+        // If specific source/target provided, return basic array.
+        java.util.List<Integer> path = new java.util.ArrayList<>();
+        if (target != null && source != null) {
+            path.add(source);
+            path.add(target);
+        }
+        res.path = path;
+        
+        res.nodesVisited = nodesVisited;
+        res.relaxations = relaxations;
+
+        return res;
     }
 }

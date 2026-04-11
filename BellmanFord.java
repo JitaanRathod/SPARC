@@ -88,7 +88,8 @@ public class BellmanFord {
 
         long start = System.nanoTime();
 
-        BellmanFord.run(graph,0);
+      BellmanFord bf = new BellmanFord();
+          bf.run(graph, 0);
 
         long end = System.nanoTime();
 
