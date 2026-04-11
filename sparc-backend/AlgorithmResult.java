@@ -4,7 +4,7 @@ public class AlgorithmResult {
     public String algorithm;
     public double executionTimeMs;
     public Object[] distances;
-    public Object[][] distanceMatrix; 
+    public Object[][] distanceMatrix;
     public List<Integer> path;
     public int nodesVisited;
     public int relaxations;
@@ -21,7 +21,8 @@ public class AlgorithmResult {
             sb.append("\"path\":[");
             for (int i = 0; i < path.size(); i++) {
                 sb.append(path.get(i));
-                if (i < path.size() - 1) sb.append(",");
+                if (i < path.size() - 1)
+                    sb.append(",");
             }
             sb.append("],");
         } else {
@@ -35,10 +36,12 @@ public class AlgorithmResult {
                 for (int j = 0; j < distanceMatrix[i].length; j++) {
                     Object val = distanceMatrix[i][j];
                     sb.append(val == null ? "null" : val.toString());
-                    if (j < distanceMatrix[i].length - 1) sb.append(",");
+                    if (j < distanceMatrix[i].length - 1)
+                        sb.append(",");
                 }
                 sb.append("]");
-                if (i < distanceMatrix.length - 1) sb.append(",");
+                if (i < distanceMatrix.length - 1)
+                    sb.append(",");
             }
             sb.append("]");
         } else if (distances != null) {
@@ -46,7 +49,8 @@ public class AlgorithmResult {
             for (int i = 0; i < distances.length; i++) {
                 Object val = distances[i];
                 sb.append(val == null ? "null" : val.toString());
-                if (i < distances.length - 1) sb.append(",");
+                if (i < distances.length - 1)
+                    sb.append(",");
             }
             sb.append("]");
         } else {
